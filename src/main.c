@@ -22,7 +22,7 @@
 /* DAC full-scale output target in mV */
 #define DAC_FULL_SCALE_MV                   5000
 /* Maximum DAC update rate */
-#define DAC_UPDATE_PERIOD_MS                25
+#define DAC_UPDATE_PERIOD_MS                20
 /* ADC calibrated range (mV) - adjust these to match your potentiometer's actual measurement range */
 /* Set to the calibrated ADC reading at the pot's minimum position */
 #define ADC_MIN_CALIBRATED_MV               139
