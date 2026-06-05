@@ -1,8 +1,13 @@
-# IV-18 VFD Clock
+# Footsie
 
 ---
 
-Footsie description todo...
+Footsie is a 16-bit DAC output foot pedal using an analog slide potentiometer as the input source.
+
+1. Firmware reads the slide potentiometer via ADC,
+2. Computes input->output transform from customisable curve,
+3. Outputs a smooth, filtered output via 16-bit DAC over I2C.
+4. DAC will return-to-zero output voltage as fail-safe.
 
 ---
 

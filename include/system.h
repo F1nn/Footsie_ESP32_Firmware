@@ -1,8 +1,7 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
-// #include "driver/i2c.h"
-// #include "driver/i2c_master.h"
+#include "driver/i2c_master.h"
 
 // Pins
 #define PIN_I2C_SDA     1

@@ -11,5 +11,6 @@ idf_component_register(
         esp_driver_spi
         esp_timer
         esp_event
+        esp_adc
 )
 
