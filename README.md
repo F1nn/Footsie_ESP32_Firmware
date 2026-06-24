@@ -1,14 +1,10 @@
 # Footsie
 
----
-
 Footsie is a configurable 16-bit DAC foot pedal controller designed for smooth analog speed control.
 
 It uses an analog slide potentiometer as the pedal position input, reads that position with an ADC, applies a configurable response curve, and outputs a filtered analog control voltage using a 16-bit I²C DAC.
 
 **Footsie is currently a work-in-progress.**
-
----
 
 ## Why?
 
@@ -22,8 +18,6 @@ Yes, this is absolutely overkill.
 
 Just the way i like it.
 
----
-
 ## Features
 
 * Analog slide potentiometer pedal input
@@ -33,8 +27,6 @@ Just the way i like it.
 * Return-to-zero DAC fail-safe behaviour
 * Designed for applications where precise foot control is important
 
----
-
 ## How it works
 
 1. The firmware reads the pedal position from the slide potentiometer using the ADC.
@@ -43,8 +35,6 @@ Just the way i like it.
 4. The result is sent to a 16-bit DAC over I²C.
 5. The DAC outputs an analog control voltage for the connected motor controller or device.
 6. If communication or control fails, the DAC output returns to zero as a fail-safe.
-
----
 
 ## Purpose
 
@@ -61,13 +51,9 @@ Footsie is not intended to be a universal motor controller. It is a configurable
 
 Check the requirements of the device being controlled before connecting Footsie. Not all pedal inputs or throttle inputs are electrically compatible.
 
----
-
 ## 🔌 Schematic
 
 ![Footsie Schematic V1.0](docs/schematic/Footsie_Schematic_V1.0.pdf)
-
----
 
 ## 🔩 Hardware Components
 
@@ -84,9 +70,6 @@ Check the requirements of the device being controlled before connecting Footsie.
 ### DAC
 
 ### Slide Potentiometer
-
-
----
 
 ## ✅ TODO
 
@@ -108,8 +91,6 @@ The intended configuration options include:
 
 The long-term goal is to make these configurable through a web or app interface, rather than requiring firmware changes for every adjustment.
 
----
-
 ## ⚡ Building & Flashing
 
 1. **Clone the repository**
@@ -124,8 +105,6 @@ Follow the normal ESP-IDF setup process for your operating system and editor.
 ```sh
 ./run.sh
 ```
-
----
 
 ## Safety Disclaimer
 
@@ -144,8 +123,6 @@ It does not provide:
 - Certification for any particular machine or application
 
 You are responsible for ensuring any system using Footsie is safe, suitable, and compliant with applicable laws and regulations.
-
----
 
 ## 📄 License
 
