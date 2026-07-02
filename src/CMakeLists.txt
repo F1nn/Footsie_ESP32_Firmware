@@ -12,5 +12,7 @@ idf_component_register(
         esp_timer
         esp_event
         esp_adc
+        bt
+        nvs_flash
 )
 
