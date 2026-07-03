@@ -89,6 +89,8 @@ The current firmware pin assignments are:
 
 ## Schematic
 
+<a href="docs/schematic/Footsie_Schematic_V1.0.pdf"><img src="images/footsie_schematic_v1.0.png" width="300" alt="Footsie Schematic"></a>
+
 ![Footsie Schematic V1.0](docs/schematic/Footsie_Schematic_V1.0.pdf)
 
 ## BLE Interface
