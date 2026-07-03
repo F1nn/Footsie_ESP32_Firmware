@@ -22,6 +22,7 @@ Just the way i like it.
 * Continuous ADC sampling with curve-fitting calibration
 * Configurable gamma response curve, persisted in NVS
 * Persisted ADC calibration range, also stored in NVS
+* Configurable output min/max scaling, persisted in NVS
 * 16-bit DAC80501 I2C output stage
 * Fail-safe zero-output behavior when input or mapping is invalid
 * WS2812 status LED feedback
@@ -103,6 +104,7 @@ Footsie exposes a custom BLE GATT service named `Footsie` for live telemetry and
 | --- | --- | --- |
 | Gamma | Read / Write | Output curve gamma, stored as an unsigned 16-bit value scaled by 100 |
 | ADC calibration | Read / Write | Calibrated minimum and maximum pedal input values in millivolts |
+| Output scaling | Read / Write | Output minimum and maximum values in millivolts, scaled over the full pedal travel |
 | ADC mV | Read / Notify | Latest averaged pedal input in millivolts |
 
 ### BLE Behavior

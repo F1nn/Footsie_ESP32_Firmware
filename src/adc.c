@@ -82,15 +82,15 @@ esp_err_t adc_raw_to_voltage(uint32_t raw, int *millivolts)
 uint32_t adc_mV_to_curved_dac_mV(uint32_t adc_mV)
 {
     if (ADC_SPAN_MV <= 0) {
-        return 0;
+        return settings_get_output_min_mv();
     }
 
     if (adc_mV <= ADC_MIN_CALIBRATED_MV) {
-        return 0;
+        return settings_get_output_min_mv();
     }
 
     if (adc_mV >= ADC_MAX_CALIBRATED_MV) {
-        return DAC_FULL_SCALE_MV;
+        return settings_get_output_max_mv();
     }
 
     float normalized = (float)(adc_mV - ADC_MIN_CALIBRATED_MV) / (float)ADC_SPAN_MV;
@@ -102,9 +102,16 @@ uint32_t adc_mV_to_curved_dac_mV(uint32_t adc_mV)
 
     float gamma = settings_get_gamma();
     float curved = powf(normalized, gamma);
-    uint32_t output_mV = (uint32_t)((curved * (float)DAC_FULL_SCALE_MV) + 0.5f);
-    if (output_mV > DAC_FULL_SCALE_MV) {
-        output_mV = DAC_FULL_SCALE_MV;
+    uint16_t output_min_mv = settings_get_output_min_mv();
+    uint16_t output_max_mv = settings_get_output_max_mv();
+    if (output_min_mv >= output_max_mv) {
+        return output_min_mv;
+    }
+
+    uint32_t output_span_mv = (uint32_t)output_max_mv - (uint32_t)output_min_mv;
+    uint32_t output_mV = (uint32_t)((curved * (float)output_span_mv) + 0.5f) + output_min_mv;
+    if (output_mV > output_max_mv) {
+        output_mV = output_max_mv;
     }
 
     return output_mV;

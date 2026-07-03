@@ -25,6 +25,7 @@ typedef enum {
     BLE_DSC_CHR_GAMMA = 1,
     BLE_DSC_CHR_ADC_RAW = 2,
     BLE_DSC_CHR_SLIDER = 3,
+    BLE_DSC_CHR_OUTPUT = 4,
 } ble_dsc_chr_id_t;
 
 static const ble_uuid128_t g_ble_svc_uuid =
@@ -40,6 +41,9 @@ static const ble_uuid128_t g_ble_adc_raw_chr_uuid =
 static const ble_uuid128_t g_ble_slider_cal_chr_uuid =
     BLE_UUID128_INIT(0x50, 0x1e, 0x5b, 0x9c, 0x76, 0x4b, 0x4b, 0x18,
                      0x9d, 0x87, 0x79, 0x6d, 0x03, 0x00, 0x8c, 0x4a);
+static const ble_uuid128_t g_ble_output_scale_chr_uuid =
+    BLE_UUID128_INIT(0x50, 0x1e, 0x5b, 0x9c, 0x76, 0x4b, 0x4b, 0x18,
+                     0x9d, 0x87, 0x79, 0x6d, 0x04, 0x00, 0x8c, 0x4a);
 
 static const ble_uuid16_t g_ble_user_desc_uuid = BLE_UUID16_INIT(0x2901);
 
@@ -66,6 +70,8 @@ static int ble_gatt_dsc_access(uint16_t conn_handle,
         desc_str = "ADC mV";
     } else if (chr_id == BLE_DSC_CHR_SLIDER) {
         desc_str = "ADC cal (min,max mV)";
+    } else if (chr_id == BLE_DSC_CHR_OUTPUT) {
+        desc_str = "Output scale (min,max mV)";
     } else {
         return BLE_ATT_ERR_UNLIKELY;
     }
@@ -176,6 +182,48 @@ static int ble_gatt_chr_access(uint16_t conn_handle,
         return BLE_ATT_ERR_UNLIKELY;
     }
 
+    if (ble_uuid_cmp(ctxt->chr->uuid, &g_ble_output_scale_chr_uuid.u) == 0) {
+        if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
+            uint16_t min_mv = settings_get_output_min_mv();
+            uint16_t max_mv = settings_get_output_max_mv();
+            uint16_t buf[2] = { min_mv, max_mv };
+            return os_mbuf_append(ctxt->om, buf, sizeof(buf)) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+        }
+
+        if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+            uint16_t vals[2] = {0,0};
+            uint16_t bytes_copied = 0;
+
+            if (OS_MBUF_PKTLEN(ctxt->om) != sizeof(vals)) {
+                return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+            }
+
+            if (ble_hs_mbuf_to_flat(ctxt->om,
+                                    vals,
+                                    sizeof(vals),
+                                    &bytes_copied) != 0 ||
+                bytes_copied != sizeof(vals)) {
+                return BLE_ATT_ERR_UNLIKELY;
+            }
+
+            uint16_t min_mv = vals[0];
+            uint16_t max_mv = vals[1];
+
+            if (min_mv >= max_mv || max_mv > DAC_OUTPUT_MAX_MV) {
+                return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+            }
+
+            if (settings_set_output_scaled_mv(min_mv, max_mv) != ESP_OK) {
+                return BLE_ATT_ERR_UNLIKELY;
+            }
+
+            ESP_LOGI(TAG, "BLE output scaling updated: min=%u mV max=%u mV", min_mv, max_mv);
+            return 0;
+        }
+
+        return BLE_ATT_ERR_UNLIKELY;
+    }
+
     return BLE_ATT_ERR_UNLIKELY;
 }
 
@@ -208,6 +256,20 @@ static const struct ble_gatt_svc_def g_ble_gatt_svcs[] = {
                         .att_flags = BLE_ATT_F_READ,
                         .access_cb = ble_gatt_dsc_access,
                         .arg = (void *)(uintptr_t)BLE_DSC_CHR_SLIDER,
+                    },
+                    {0},
+                },
+            },
+            {
+                .uuid = &g_ble_output_scale_chr_uuid.u,
+                .access_cb = ble_gatt_chr_access,
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE,
+                .descriptors = (struct ble_gatt_dsc_def[]) {
+                    {
+                        .uuid = &g_ble_user_desc_uuid.u,
+                        .att_flags = BLE_ATT_F_READ,
+                        .access_cb = ble_gatt_dsc_access,
+                        .arg = (void *)(uintptr_t)BLE_DSC_CHR_OUTPUT,
                     },
                     {0},
                 },

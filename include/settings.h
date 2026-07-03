@@ -22,4 +22,9 @@ uint16_t settings_get_adc_min_mv(void);
 uint16_t settings_get_adc_max_mv(void);
 esp_err_t settings_set_adc_calibrated_mv(uint16_t min_mv, uint16_t max_mv);
 
+/* DAC output scaling (millivolts) */
+uint16_t settings_get_output_min_mv(void);
+uint16_t settings_get_output_max_mv(void);
+esp_err_t settings_set_output_scaled_mv(uint16_t min_mv, uint16_t max_mv);
+
 #endif /* SETTINGS_H */
