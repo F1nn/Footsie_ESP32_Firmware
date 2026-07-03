@@ -1,10 +1,8 @@
 # Footsie
 
-Footsie is a configurable 16-bit DAC foot pedal controller designed for smooth analog speed control.
+Footsie is a configurable foot pedal controller built around an ESP32-S3, an ADC input from a slide potentiometer, and a 16-bit I2C DAC output.
 
-It uses an analog slide potentiometer as the pedal position input, reads that position with an ADC, applies a configurable response curve, and outputs a filtered analog control voltage using a 16-bit I²C DAC.
-
-**Footsie is currently a work-in-progress.**
+It reads pedal position, applies a tunable response curve, smooths the result, and drives an analog control voltage for a connected machine or controller.
 
 ## Why?
 
@@ -20,21 +18,24 @@ Just the way i like it.
 
 ## Features
 
-* Analog slide potentiometer pedal input
-* Configurable input-to-output response curve
-* Smooth filtered output voltage
-* 16-bit DAC output controlled over I²C
-* Return-to-zero DAC fail-safe behaviour
-* Designed for applications where precise foot control is important
+* Analog slide potentiometer pedal input on ADC channel 2 / GPIO 3
+* Continuous ADC sampling with curve-fitting calibration
+* Configurable gamma response curve, persisted in NVS
+* Persisted ADC calibration range, also stored in NVS
+* 16-bit DAC80501 I2C output stage
+* Fail-safe zero-output behavior when input or mapping is invalid
+* WS2812 status LED feedback
+* BLE GATT service for live monitoring and configuration
+* Designed for low-speed precision control where pedal feel matters
 
 ## How it works
 
-1. The firmware reads the pedal position from the slide potentiometer using the ADC.
-2. The raw input value is mapped through a configurable response curve.
-3. The transformed value is filtered to produce a smooth output.
-4. The result is sent to a 16-bit DAC over I²C.
-5. The DAC outputs an analog control voltage for the connected motor controller or device.
-6. If communication or control fails, the DAC output returns to zero as a fail-safe.
+1. The firmware samples the slide potentiometer continuously through the ADC.
+2. Samples are averaged over the update window and converted to millivolts.
+3. The calibrated input range is normalized and shaped with a configurable gamma curve.
+4. The result is written to the DAC as an analog control voltage.
+5. If the ADC, calibration, or DAC path is not valid, the output is driven to zero.
+6. A WS2812 LED shows output activity and BLE connection state.
 
 ## Purpose
 
@@ -51,45 +52,89 @@ Footsie is not intended to be a universal motor controller. It is a configurable
 
 Check the requirements of the device being controlled before connecting Footsie. Not all pedal inputs or throttle inputs are electrically compatible.
 
-## 🔌 Schematic
+## Hardware
+
+### Core Parts
+
+Footsie currently uses these major components:
+
+* ESP32-S3 microcontroller
+* DAC80501 16-bit DAC over I2C
+* Slide potentiometer as the pedal input
+* WS2812B RGB LED for status indication
+
+### Pin Map
+
+The current firmware pin assignments are:
+
+| Function | GPIO |
+| --- | --- |
+| I2C SDA | 1 |
+| I2C SCL | 2 |
+| ADC input | 3 |
+| RGB LED | 21 |
+| UART0 TX | 43 |
+| UART0 RX | 44 |
+
+### Current Defaults
+
+| Setting | Value |
+| --- | --- |
+| ADC reference voltage | 3300 mV |
+| DAC full-scale output target | 5000 mV |
+| DAC update period | 20 ms |
+| Debug log period | 1000 ms |
+| Default gamma | 2.2 |
+| Gamma range | 0.50 to 5.00 |
+| Default calibrated ADC minimum | 139 mV |
+| Default calibrated ADC maximum | 3181 mV |
+
+## Schematic
 
 ![Footsie Schematic V1.0](docs/schematic/Footsie_Schematic_V1.0.pdf)
 
-## 🔩 Hardware Components
+## BLE Interface
 
-### Power
+Footsie exposes a custom BLE GATT service named `Footsie` for live telemetry and configuration.
 
-### ESP32-S3 Microprocessor
+### Characteristics
 
-* Dual-core Xtensa LX7 @ up to 240 MHz.
-* 512 KB SRAM + 384 KB ROM (on-chip) + 8MB PSRAM on module.
-* Integrated Wi-Fi 4 (802.11 b/g/n) + Bluetooth 5 (LE).
-* USB-C OTG support for power, firmware updates, etc.
-* Deep sleep as low as ~5 µA.
+| Characteristic | Access | Description |
+| --- | --- | --- |
+| Gamma | Read / Write | Output curve gamma, stored as an unsigned 16-bit value scaled by 100 |
+| ADC calibration | Read / Write | Calibrated minimum and maximum pedal input values in millivolts |
+| ADC mV | Read / Notify | Latest averaged pedal input in millivolts |
 
-### DAC
+### BLE Behavior
 
-### Slide Potentiometer
+* The device advertises as `Footsie`.
+* Gamma values are accepted in the range 0.50 to 5.00.
+* ADC calibration values must satisfy `min < max` and `max <= ADC_VREF_MV`.
+* The latest ADC reading is published through GATT notifications when subscribed.
+* Advertising is restarted automatically after disconnect or advertising completion.
+* If a client disables ADC notifications, the firmware intentionally terminates that BLE connection.
 
-## ✅ TODO
+## Configuration
 
-- [ ] Add web/app interface for configuration
-- [ ] Add enclosure / pedal mechanical details
+The main tunable values are stored in NVS and survive reboot:
 
-The intended configuration options include:
+* Output gamma
+* Calibrated ADC minimum millivolts
+* Calibrated ADC maximum millivolts
 
-- Pedal minimum input
-- Pedal maximum input
-- Output minimum voltage
-- Output maximum voltage
-- Start dead zone
-- End dead zone
-- Response curve shape
-- Filtering / smoothing amount
-- Fail-safe behaviour
-- Saved profiles
+The firmware currently uses these defaults if NVS has no saved values:
 
-The long-term goal is to make these configurable through a web or app interface, rather than requiring firmware changes for every adjustment.
+* Gamma: 2.2
+* ADC min: 139 mV
+* ADC max: 3181 mV
+
+## Status Indication
+
+The onboard WS2812 LED is used as a simple status display:
+
+* Green intensity tracks the applied DAC output level.
+* Blue is lit when BLE is connected and subscribed.
+* During startup the LED is briefly set to green when initialization completes.
 
 ## ⚡ Building & Flashing
 
@@ -98,15 +143,33 @@ The long-term goal is to make these configurable through a web or app interface,
 git clone <repository-url>
 cd Footsie
 ```
-2. **Set-up ESP-IDF**
+
+2. **Set up ESP-IDF**
 
 Follow the normal ESP-IDF setup process for your operating system and editor.
 
-3. **Build / flash and monitor**
+The firmware is built for ESP-IDF with Bluetooth enabled and NimBLE selected.
+
+3. **Build, flash, and monitor**
 
 ```sh
 ./run.sh
 ```
+
+By default, `run.sh` uses `/dev/ttyACM0`. Override the port if needed:
+
+```sh
+PORT=/dev/ttyUSB0 ./run.sh
+```
+
+The script runs `idf.py build` and then flashes and opens the serial monitor.
+
+## Development Notes
+
+* ADC sampling is continuous and the firmware averages samples before each DAC update window.
+* The DAC output is forced to zero if no valid ADC update is available.
+* BLE state is polled from the main loop while the application is running.
+* The firmware logs the current mapping from raw input to curved output once per second.
 
 ## Safety Disclaimer
 
@@ -126,6 +189,6 @@ It does not provide:
 
 You are responsible for ensuring any system using Footsie is safe, suitable, and compliant with applicable laws and regulations.
 
-## 📄 License
+## License
 
 MIT License (see LICENSE file)
